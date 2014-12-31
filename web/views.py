@@ -1,6 +1,5 @@
 # Create your views here.
 from django.http import Http404
-from django.shortcuts import get_object_or_404
 
 from rest_framework.views import APIView, status
 from rest_framework.response import Response
@@ -20,8 +19,6 @@ class insert_url(APIView):
         if bookmark_serializer.is_valid():
             bookmark_serializer.save()
             bookmark_id = {'bookmark': bookmark_serializer.data['id']}
-            #data = [dict(item, **bookmark_id) for item in request.data['urlid']]
-            #tag_serializer = TagSerializer(data=data, many=True)
             bkid = Bookmark.objects.get(id=bookmark_id['bookmark'])
             bkid.url_tag.add(*([Tags.objects.create(tag=tag['tag']) for tag in request.data['urlid']]))
             serializer = TagSerializer(bkid.url_tag.all(), many=True)
@@ -51,7 +48,7 @@ class Url_Detail_Update(APIView):
         data['Url'] = url.bookmark
         for item in serializer.data:
             data['tags'].append(item['tag'])
-        return Response(data)
+        return Response(data, status=status.HTTP_200_OK)
 
     def put(self, request, pk, format=None):
         data = {'tags': []}
@@ -71,7 +68,28 @@ class Url_Detail_Update(APIView):
     def delete(self, request, pk, format=None):
         bookmark = self.get_object(pk=pk)
         bookmark.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_302_FOUND)
+
+
+class Edit_URL(APIView):
+    """
+    Editting the URL by adding or updating tags
+    """
+
+    def put(self, request, pk, format=None):
+        data = {'tags': []}
+        url = Url_Detail_Update().get_object(pk=pk)
+        try:
+            for tag in request.data['tags']:
+                _tag = Tags.objects.get(tag=tag)
+                url.url_tag.add(_tag)
+        except Tags.DoesNotExist as e:
+            return Response(e.message, status=status.HTTP_404_NOT_FOUND)
+        serializer = TagSerializer(url.url_tag.all(), many=True)
+        data['Url'] = url.bookmark
+        for item in serializer.data:
+            data['tags'].append(item['tag'])
+        return Response(data, status.HTTP_201_CREATED)
 
 
 class Tag_Detail_Upadte(APIView):
@@ -95,7 +113,7 @@ class Tag_Detail_Upadte(APIView):
         serializer = BookmarkSerializer(tag.bookmark.all(), many=True)
         data['bookmarks'] = serializer.data
         data['tag'] = tag.tag
-        return Response(data)
+        return Response(data, status=status.HTTP_200_OK)
 
     def put(self, request, pk, format=None):
         with open('/var/www/myenv/web/foo.txt', 'w') as f:
@@ -111,6 +129,21 @@ class Tag_Detail_Upadte(APIView):
         tag = self.get_object(pk)
         tag.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class Edit_Tag(APIView):
+    """
+    Editting the Tag
+    """
+    def put(self, request, pk, format=None):
+        with open('/var/www/myenv/web/foo.txt', 'w') as f:
+            f.write(str(request.data))
+        tag = Tag_Detail_Upadte().get_object(pk=pk)
+        serializer = TagSerializer(tag, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class Create_Tag(APIView):
@@ -133,9 +166,7 @@ class Create_Tag(APIView):
 
 
 class UrlList(APIView):
-    """
-    Using Get Put Delete Request
-    """
+
     def get_object(self, pk):
         try:
             return Bookmark.objects.get(pk=pk)
@@ -152,26 +183,3 @@ class UrlList(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class Delete_Tag(APIView):
-    """
-    Delete The Tag
-    """
-    def post(self, request):
-        tag = get_object_or_404(Tags, tag=request.data['tag'])
-        tag.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class GetUrl(APIView):
-    """
-    Retrieve the Tag related URL
-    """
-
-    def post(self, request, format=None):
-        tag = get_object_or_404(Tags, tag=request.data['tag'])
-        with open('/var/www/myenv/web/foo.txt', 'w') as f:
-            f.write(str(tag))
-        serializer = BookmarkSerializer(tag.bookmark)
-        return Response(serializer.data)
