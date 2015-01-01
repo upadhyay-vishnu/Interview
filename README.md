@@ -141,16 +141,7 @@ Rename the Tag
 					}
 				
 <i class="icon-trash"></i> **Delete Tag**
->- Request:- GET
->-  class :- Edit_Tag
->- URL:- http://127.0.0.1/interview/tags/7/edit  id=7
->- Request: - id=7
->- Rsponse Type :- Json
->- Status:- HTTP_200_OK
->-  Response :- {
-					 Name:  coding+
-					Url:- https://www.apple.com
-					}
+
 Delete Tag and free URL attach with Tag.
 >- Request:- Delete
 >- class:- Tag_Detail_Upadte
