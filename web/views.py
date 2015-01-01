@@ -20,7 +20,8 @@ class Insert_URL(APIView):
             bookmark_serializer.save()
             bookmark_id = {'bookmark': bookmark_serializer.data['id']}
             bkid = Bookmark.objects.get(id=bookmark_id['bookmark'])
-            bkid.url_tag.add(*([Tags.objects.create(tag=tag['tag']) for tag in request.data['urlid']]))
+            bkid.url_tag.add(*([Tags.objects.create(tag=tag['tag'])
+                             for tag in request.data['urlid']]))
             serializer = TagSerializer(bkid.url_tag.all(), many=True)
             return Response('created', status=status.HTTP_201_CREATED)
         return Response(bookmark_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -134,11 +135,15 @@ class Edit_Tag(APIView):
     Editting the Tag
     """
     def put(self, request, pk, format=None):
+        data = {'bookmark': []}
         tag = Tag_Detail_Upadte().get_object(pk=pk)
+        data['tag'] = tag.tag
         serializer = TagSerializer(tag, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            for _id in dict(serializer.data)['bookmark']:
+                data['bookmark'].append(Bookmark.objects.get(id=_id).bookmark)
+            return Response(data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
